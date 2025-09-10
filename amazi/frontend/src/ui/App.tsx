@@ -109,6 +109,10 @@ export function App() {
             }} confirming={confirming} />
           </section>
         )}
+
+        <section style={{ marginTop: 24 }}>
+          <DataViews />
+        </section>
       </div>
     </div>
   )
@@ -238,6 +242,56 @@ function Row({ left, right, sub, confidence }: { left: string, right: string, su
           </span>
         )}
       </div>
+    </div>
+  )
+}
+
+function DataViews() {
+  const [employees, setEmployees] = useState<any[]>([])
+  const [shifts, setShifts] = useState<any[]>([])
+
+  React.useEffect(() => {
+    const fetchAll = async () => {
+      try {
+        const [e, s] = await Promise.all([
+          fetch(`${API_BASE}/employees`).then(r => r.json()),
+          fetch(`${API_BASE}/shifts`).then(r => r.json()),
+        ])
+        setEmployees(e.items || [])
+        setShifts(s.items || [])
+      } catch {}
+    }
+    fetchAll()
+  }, [])
+
+  return (
+    <div style={{ display: 'grid', gap: 16 }}>
+      <h2 style={{ margin: '8px 0 0 0', fontSize: 18 }}>Data</h2>
+      <Card title={`Employees (${employees.length})`}>
+        <div style={{ display: 'grid', gap: 8 }}>
+          {employees.map((e) => (
+            <div key={e.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+              <div>{e.name}</div>
+              <div>{e.role || '—'}</div>
+              <div style={{ color: '#64748b' }}>{e.email || e.phone || ''}</div>
+            </div>
+          ))}
+          {employees.length === 0 && <div style={{ color: '#64748b' }}>No employees saved yet.</div>}
+        </div>
+      </Card>
+      <Card title={`Shifts (${shifts.length})`}>
+        <div style={{ display: 'grid', gap: 8 }}>
+          {shifts.map((s) => (
+            <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
+              <div>{s.date}</div>
+              <div>{s.start_time}–{s.end_time}</div>
+              <div>{s.role || '—'}</div>
+              <div style={{ color: '#64748b' }}>emp:{s.employee_id ?? '—'}</div>
+            </div>
+          ))}
+          {shifts.length === 0 && <div style={{ color: '#64748b' }}>No shifts saved yet.</div>}
+        </div>
+      </Card>
     </div>
   )
 }
