@@ -4,6 +4,7 @@ from app.core.config import get_settings
 from app.db.database import Base, engine
 from app.api.routes.health import router as health_router
 from app.api.routes.uploads import router as uploads_router
+from app.api.routes.data import router as data_router
 
 
 settings = get_settings()
@@ -26,4 +27,5 @@ async def on_startup() -> None:
 
 app.include_router(health_router, prefix="/api")
 app.include_router(uploads_router, prefix="/api")
+app.include_router(data_router, prefix="/api")
 

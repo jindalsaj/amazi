@@ -8,6 +8,12 @@ import pdfplumber
 from dateutil import parser as dateparser
 
 from app.schemas.extraction import ExtractionPreview, EmployeeRecord, ShiftRecord, Evidence
+try:
+    import pytesseract  # type: ignore
+    from PIL import Image  # type: ignore
+except Exception:  # pragma: no cover
+    pytesseract = None
+    Image = None
 
 
 def _infer_datetime(value: str) -> datetime | None:
@@ -142,6 +148,25 @@ def extract_preview(path: str) -> ExtractionPreview:
         return extract_from_csv_xlsx(path)
     if suffix in {".pdf"}:
         return extract_from_pdf(path)
-    # images: return empty with review request for now
-    return ExtractionPreview(file_type="image", employees=[], shifts=[], needs_review_fields=["image_ocr_not_implemented"]) 
+    # images: minimal OCR if available
+    if pytesseract and Image:
+        try:
+            text = pytesseract.image_to_string(Image.open(path))
+            preview = ExtractionPreview(file_type="image")
+            lines = [l.strip() for l in text.splitlines() if l.strip()]
+            for ln in lines:
+                if any(tok in ln.lower() for tok in [":", "am", "pm", "–", "-"]):
+                    preview.needs_review_fields.append(f"image_line_time: {ln[:40]}")
+                else:
+                    if any(ch.isalpha() for ch in ln) and len(ln.split()) <= 3:
+                        preview.employees.append(
+                            EmployeeRecord(name=ln, evidence=Evidence(file_type="image", source_hint="ocr", raw_text=ln), confidence=0.2)
+                        )
+            if not preview.employees:
+                preview.needs_review_fields.append("image_ocr_low_signal")
+            return preview
+        except Exception:
+            pass
+    return ExtractionPreview(file_type="image", employees=[], shifts=[], needs_review_fields=["image_ocr_not_available"]) 
+
 

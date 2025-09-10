@@ -40,3 +40,33 @@ class ExtractionPreview(BaseModel):
     shifts: list[ShiftRecord] = Field(default_factory=list)
     needs_review_fields: list[str] = Field(default_factory=list)
 
+class UploadPreviewResponse(BaseModel):
+    upload_id: int
+    preview: ExtractionPreview
+
+
+class EmployeeInput(BaseModel):
+    name: str
+    role: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    wage: float | None = None
+    min_hours: float | None = None
+    max_hours: float | None = None
+
+
+class ShiftInput(BaseModel):
+    employee_name: str
+    role: str | None = None
+    date: date
+    start_time: time
+    end_time: time
+    unpaid_break_min: int | None = None
+    status: str | None = None
+    location: str | None = None
+
+
+class ConfirmPayload(BaseModel):
+    employees: list[EmployeeInput] = Field(default_factory=list)
+    shifts: list[ShiftInput] = Field(default_factory=list)
+

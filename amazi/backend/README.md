@@ -24,6 +24,20 @@ pip install -r backend/requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+Migrations
+----------
+
+Generate (if models change):
+
+```bash
+alembic -c alembic.ini revision --autogenerate -m "change"
+```
+
+Apply:
+
+```bash
+alembic -c alembic.ini upgrade head
+```
 Endpoints
 ---------
 
