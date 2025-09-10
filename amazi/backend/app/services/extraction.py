@@ -169,3 +169,4 @@ def extract_preview(path: str) -> ExtractionPreview:
             pass
     return ExtractionPreview(file_type="image", employees=[], shifts=[], needs_review_fields=["image_ocr_not_available"]) 
 
+

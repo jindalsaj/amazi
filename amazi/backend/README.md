@@ -38,7 +38,6 @@ Apply:
 ```bash
 alembic -c alembic.ini upgrade head
 ```
-
 Endpoints
 ---------
 
