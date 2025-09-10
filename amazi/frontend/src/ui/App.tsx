@@ -49,6 +49,7 @@ export function App() {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [resp, setResp] = useState<UploadPreviewResponse | null>(null)
+  const [confirming, setConfirming] = useState(false)
 
   const onDrop = useCallback(async (file: File) => {
     setError(null)
@@ -80,7 +81,7 @@ export function App() {
     }}>
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '40px 24px' }}>
         <header style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 8, background: '#0ea5e9', display: 'grid', placeItems: 'center', color: 'white', fontWeight: 700 }}>A</n></div>
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: '#0ea5e9', display: 'grid', placeItems: 'center', color: 'white', fontWeight: 700 }}>A</div>
           <h1 style={{ margin: 0, fontSize: 22 }}>Amazi — AI-native Scheduling</h1>
         </header>
 
@@ -90,7 +91,22 @@ export function App() {
 
         {resp && (
           <section style={{ marginTop: 24, display: 'grid', gap: 16 }}>
-            <Preview response={resp} />
+            <EditablePreview response={resp} onConfirm={async (payload) => {
+              setConfirming(true)
+              try {
+                const res = await fetch(`${API_BASE}/uploads/${resp.upload_id}/confirm`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(payload)
+                })
+                if (!res.ok) throw new Error(await res.text())
+                alert('Saved!')
+              } catch (e: any) {
+                alert(e.message || 'Failed to confirm')
+              } finally {
+                setConfirming(false)
+              }
+            }} confirming={confirming} />
           </section>
         )}
       </div>
@@ -148,40 +164,52 @@ function Chat({ onDrop, uploading, error }: { onDrop: (file: File) => void, uplo
   )
 }
 
-function Preview({ response }: { response: UploadPreviewResponse }) {
-  const { preview } = response
+function EditablePreview({ response, onConfirm, confirming }: { response: UploadPreviewResponse, onConfirm: (payload: { employees: any[]; shifts: any[] }) => void, confirming: boolean }) {
+  const [employees, setEmployees] = useState<EmployeeRecord[]>(response.preview.employees)
+  const [shifts, setShifts] = useState<ShiftRecord[]>(response.preview.shifts)
+
+  const addEmployee = () => setEmployees(prev => [...prev, { name: '', confidence: 1 } as any])
+  const addShift = () => setShifts(prev => [...prev, { confidence: 1 } as any])
+
+  const toPayload = () => ({
+    employees: employees.filter(e => e.name?.trim()).map(e => ({ name: e.name, role: e.role || null, email: e.email || null, phone: e.phone || null, wage: e.wage || null, min_hours: e.min_hours || null, max_hours: e.max_hours || null })),
+    shifts: shifts.filter(s => s.employee_name && s.date && s.start_time && s.end_time).map(s => ({ employee_name: s.employee_name!, role: s.role || null, date: s.date!, start_time: s.start_time!, end_time: s.end_time!, unpaid_break_min: s.unpaid_break_min || null, status: s.status || null, location: s.location || null }))
+  })
+
   return (
     <div style={{ display: 'grid', gap: 16 }}>
-      <h2 style={{ margin: '8px 0 0 0', fontSize: 18 }}>Extraction preview</h2>
+      <h2 style={{ margin: '8px 0 0 0', fontSize: 18 }}>Review & edit</h2>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16 }}>
-        <Card title={`Employees (${preview.employees.length})`}>
+        <Card title={`Employees (${employees.length})`}>
           <div style={{ display: 'grid', gap: 8 }}>
-            {preview.employees.length === 0 && <div style={{ color: '#64748b' }}>No employees detected yet.</div>}
-            {preview.employees.map((e, idx) => (
-              <Row key={idx} left={e.name} right={e.role || '—'} sub={e.evidence?.source_hint} confidence={e.confidence} />
+            {employees.map((e, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 8 }}>
+                <input value={e.name || ''} onChange={ev => setEmployees(arr => arr.map((x, idx) => idx === i ? { ...x, name: ev.target.value } : x))} placeholder="Name" />
+                <input value={e.role || ''} onChange={ev => setEmployees(arr => arr.map((x, idx) => idx === i ? { ...x, role: ev.target.value } : x))} placeholder="Role" />
+                <button onClick={() => setEmployees(arr => arr.filter((_, idx) => idx !== i))} style={{ background: 'transparent', color: '#dc2626' }}>Remove</button>
+              </div>
             ))}
+            <button onClick={addEmployee} style={{ background: '#f1f5f9', border: '1px dashed #cbd5e1', borderRadius: 8, padding: 8 }}>+ Add employee</button>
           </div>
         </Card>
-        <Card title={`Shifts (${preview.shifts.length})`}>
-          <div style={{ display: 'grid', gap: 6, maxHeight: 360, overflow: 'auto' }}>
-            {preview.shifts.length === 0 && <div style={{ color: '#64748b' }}>No shifts parsed. If this is a PDF or image, I may need manual confirmation.</div>}
-            {preview.shifts.map((s, idx) => (
-              <Row key={idx}
-                   left={`${s.date || '??'}  ${s.start_time || '??'}–${s.end_time || '??'}`}
-                   right={s.employee_name || s.role || '—'}
-                   sub={s.evidence?.source_hint}
-                   confidence={s.confidence} />
+        <Card title={`Shifts (${shifts.length})`}>
+          <div style={{ display: 'grid', gap: 8 }}>
+            {shifts.map((s, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: 8 }}>
+                <input value={s.employee_name || ''} onChange={ev => setShifts(arr => arr.map((x, idx) => idx === i ? { ...x, employee_name: ev.target.value } : x))} placeholder="Employee" />
+                <input value={s.date || ''} onChange={ev => setShifts(arr => arr.map((x, idx) => idx === i ? { ...x, date: ev.target.value } : x))} placeholder="YYYY-MM-DD" />
+                <input value={s.start_time || ''} onChange={ev => setShifts(arr => arr.map((x, idx) => idx === i ? { ...x, start_time: ev.target.value } : x))} placeholder="HH:MM" />
+                <input value={s.end_time || ''} onChange={ev => setShifts(arr => arr.map((x, idx) => idx === i ? { ...x, end_time: ev.target.value } : x))} placeholder="HH:MM" />
+                <button onClick={() => setShifts(arr => arr.filter((_, idx) => idx !== i))} style={{ background: 'transparent', color: '#dc2626' }}>Remove</button>
+              </div>
             ))}
+            <button onClick={addShift} style={{ background: '#f1f5f9', border: '1px dashed #cbd5e1', borderRadius: 8, padding: 8 }}>+ Add shift</button>
           </div>
         </Card>
       </div>
-      {preview.needs_review_fields.length > 0 && (
-        <Card title="Needs review">
-          <ul style={{ margin: 0, paddingLeft: 16 }}>
-            {preview.needs_review_fields.map((f, i) => <li key={i} style={{ color: '#b45309' }}>{f}</li>)}
-          </ul>
-        </Card>
-      )}
+      <div style={{ display: 'flex', gap: 12 }}>
+        <button disabled={confirming} onClick={() => onConfirm(toPayload())} style={{ background: '#16a34a', color: 'white', padding: '10px 14px', borderRadius: 8, fontWeight: 700 }}>{confirming ? 'Saving...' : 'Confirm & save'}</button>
+      </div>
     </div>
   )
 }
