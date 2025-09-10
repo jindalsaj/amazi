@@ -40,3 +40,7 @@ class ExtractionPreview(BaseModel):
     shifts: list[ShiftRecord] = Field(default_factory=list)
     needs_review_fields: list[str] = Field(default_factory=list)
 
+class UploadPreviewResponse(BaseModel):
+    upload_id: int
+    preview: ExtractionPreview
+

@@ -6,7 +6,7 @@ from pathlib import Path
 from app.core.config import get_settings
 from app.db.database import get_db
 from app.models.models import TimesheetUpload, ExtractionRun
-from app.schemas.extraction import ExtractionPreview
+from app.schemas.extraction import ExtractionPreview, UploadPreviewResponse
 from app.services.storage import save_upload_locally
 from app.services.extraction import extract_preview
 
@@ -14,7 +14,7 @@ from app.services.extraction import extract_preview
 router = APIRouter(tags=["uploads"])
 
 
-@router.post("/uploads/timesheet", response_model=ExtractionPreview)
+@router.post("/uploads/timesheet", response_model=UploadPreviewResponse)
 async def upload_timesheet(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
@@ -55,7 +55,7 @@ async def upload_timesheet(
         )
     )
     await db.commit()
-    return preview
+    return UploadPreviewResponse(upload_id=upload_id, preview=preview)
 
 
 @router.post("/uploads/{upload_id}/confirm")
