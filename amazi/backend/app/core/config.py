@@ -13,7 +13,7 @@ class Settings:
         "postgresql+psycopg2://postgres:postgres@localhost:5432/amazi",
     )
     timezone: str = os.getenv("TIMEZONE", "US/Eastern")
-    storage_dir: str = os.getenv("STORAGE_DIR", "/workspace/amazi/storage")
+    storage_dir: str = os.getenv("STORAGE_DIR", "./storage")
     max_upload_mb: int = int(os.getenv("MAX_UPLOAD_MB", "5"))
     allowed_file_types: set[str] = set(
         os.getenv("ALLOWED_FILE_TYPES", "csv,xlsx,pdf,jpg,jpeg,png,heic").split(",")
